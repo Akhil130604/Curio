@@ -4,7 +4,11 @@ import cv2
 import numpy as np
 import math
 import pyttsx3
-from guizero import App, PushButton, TextBox,Text
+#from guizero import App, PushButton, TextBox,Text
+import tkinter as tk
+from tkinter import filedialog
+from threading import Thread
+import threading
 
 
 def speak(name):
@@ -18,7 +22,19 @@ def speak(name):
     engine.say( "welcome to tiara twenty twenty three")
     engine.runAndWait()
 
+def gui(frame,data):
+    # Create a GUI window to input the filename
+    if data == "":
+        root = tk.Tk()
+        root.withdraw()
 
+        filename = filedialog.asksaveasfilename(
+            initialdir="/home/pi/all-projects/curio/curio/faces",
+            title="Save as",
+            filetypes=[("JPEG Image", ".jpg"), ("All Files", ".*")],)
+        cv2.imwrite(filename, frame)
+        root.destroy()
+        print("done")
 # Helper
 def face_confidence(face_distance, face_match_threshold=0.6):
     range = (1.0 - face_match_threshold)
@@ -31,13 +47,14 @@ def face_confidence(face_distance, face_match_threshold=0.6):
         return str(round(value, 2)) + '%'
 
 
-class FaceRecognition:
+class FaceRecognition (threading.Thread):
     face_locations = []
     face_encodings = []
     face_names = []
     known_face_encodings = []
     known_face_names = []
     process_current_frame = False
+    global frame,data
 
 
     def __init__(self):
@@ -131,6 +148,9 @@ class FaceRecognition:
                     previousData=nameForSpeak[0:len(nameForSpeak)-4]
                     previousflag=0
                     justonce=0
+                
+#                 if data == "":
+#                     gui(frame,data)
                     
                 
                 if data == previousData and data == "":
@@ -141,43 +161,7 @@ class FaceRecognition:
                     previousflag = 0
 
 #                 print("Hello " + name[0:len(name)-13])
-                def show():
-                    text_box.show()
-                    yes_button.destroy()
-                    no_button.destroy()
-                    enter_button.show()
-                    intro.hide()
-                    text2.show()
-
-                def hide():
-                    text_box.hide()
-
-                def destroy():
-                    text_box.destroy()
-                    yes_button.destroy()
-                    no_button.destroy()
-    
-                def save():
-                    txt=text_box.tk.get()
-                    print(txt)
-                    return txt
-                if(nameForSpeak == ""):
-                    app = App("Face recognition")
-                    intro=Text(app,text="would you like to register new face")
-                    text2=Text(app,text="Enter your name")
-                    text2.hide()
-                    text_box = TextBox(app)
-                    text_box.hide()
-                    yes_button = PushButton(app, text="Yes", command=show)
-                    no_button = PushButton(app, text="No", command=destroy)
-                    enter_button=PushButton(app,text="Enter",command=save)
-                    enter_button.hide()
-                    app.display()
-                    path='/home/pi/all-projects/curio/curio/faces'
-                    filename = ".jpg"
-                    cv2.imwrite(os.path.join(path,filename), frame)
-                    
-                if data==previousData:
+                if(data==previousData):
                     print("check_1")
                     print("data: "+data + "length : "+ str(len(data)))
                     print("previousData: "+previousData+ " length : "+ str(len(previousData)))
@@ -197,9 +181,6 @@ class FaceRecognition:
                     print("check3")
                     previousData=data
                     
-                        
-                
-
             # Display the resulting image
 #             frame=cv2.resize(frame,(720,720))
             cv2.imshow('Face Recognition', frame)
@@ -215,4 +196,11 @@ class FaceRecognition:
 
 if __name__ == '__main__':
     fr = FaceRecognition()
-    fr.run_recognition()
+    try:
+        t1=Thread(target=fr.run_recognition())
+        #t2=Thread(target=gui, args=(frame,data))
+        t1.start()
+        #t2.start()
+    except:
+        print("Error in thread")
+        
