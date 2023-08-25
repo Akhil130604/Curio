@@ -9,6 +9,7 @@ import tkinter as tk
 from tkinter import filedialog
 from threading import Thread
 import threading
+from queue import Queue
 
 def speak(name):
     engine=pyttsx3.init()
@@ -44,13 +45,27 @@ class FaceRecognition ():
 
     def __init__(self):
         self.encode_faces()
+        self.frame_queue=Queue()
+        self.data_queue=Queue()
         
-    def gui(self,frame,data):
+    def run(self):
+        t1=Thread(target=fr.run_recognition)
+        t2=Thread(target=fr.gui)
+        t1.deamon=True
+        t2.deamon=True
+        t1.start()
+        t2.start()
+        
+        
+        
+    def gui(self):
         # Create a GUI window to input the filename
+        data=self.data_queue.get()
         if data == "":
             root = tk.Tk()
             root.withdraw()
-
+        while True:
+            frame=self.frame_queue.get()
             filename = filedialog.asksaveasfilename(
                 initialdir="/home/pi/all-projects/curio/curio/faces",
                 title="Save as",
@@ -80,6 +95,7 @@ class FaceRecognition ():
         
         while True:
             ret, frame = video_capture.read()
+            self.frame_queue.put(frame)
 
             # Only process every other frame of video to save time
             if self.process_current_frame:
@@ -141,6 +157,7 @@ class FaceRecognition ():
 
                 
                 data=nameForSpeak[0:len(nameForSpeak)-4]
+                self.data_queue.put(data)
 
                 # data= name.split('.')[:-1]
                 if justonce==1:
@@ -195,11 +212,4 @@ class FaceRecognition ():
 
 if __name__ == '__main__':
     fr = FaceRecognition()
-    t1=Thread(target=fr.run_recognition)
-    t2=Thread(target=fr.gui)
-    t1.deamon=True
-    t2.deamon=True
-    t1.start()
-    t2.start()
-while True:
-    pass
+    fr.run()
